@@ -364,12 +364,14 @@ def receive_sensor_data():
         
         
         # To store the sensor data in the database
+        # Convert ESP32's Unix timestamp to PostgreSQL TIMESTAMP for created_at
+        created_at_timestamp = datetime.fromtimestamp(timestamp)
         conn = get_db_connection()
         iotdb = conn.cursor()
         iotdb.execute('''
-            INSERT INTO sensor_data (team_number, temperature, humidity, timestamp, encrypted_data)
-            VALUES (%s, %s, %s, %s, %s)
-        ''', (team_number, temperature, humidity, timestamp, encrypted_data))
+            INSERT INTO sensor_data (team_number, temperature, humidity, timestamp, encrypted_data, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (team_number, temperature, humidity, timestamp, encrypted_data, created_at_timestamp))
         conn.commit()
         conn.close()
         
@@ -702,12 +704,14 @@ def get_dashboard_stats():
         active_connections = iotdb.fetchone()[0]
         
         # To calculate the real data throughput (records per minute in last hour)
-        iotdb.execute('SELECT COUNT(*) FROM sensor_data WHERE created_at > NOW() - INTERVAL \'1 minute\'')
+        # Use Unix timestamp column to compare with current time minus 60 seconds
+        current_timestamp = int(time.time())
+        one_minute_ago = current_timestamp - 60
+        iotdb.execute('SELECT COUNT(*) FROM sensor_data WHERE timestamp > %s', (one_minute_ago,))
         last_minute_records = iotdb.fetchone()[0]
         throughput = last_minute_records  # Records per minute
         
         # This is to calculate the real query efficiency (percentage of successful queries) based on table size and index usage
-        import time
         start_time = time.time()
         iotdb.execute('SELECT COUNT(*) FROM sensor_data WHERE temperature > 0')
         query_time = time.time() - start_time
