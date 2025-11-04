@@ -1,0 +1,5 @@
+Flask==2.3.3
+pycryptodome==3.19.0
+requests==2.31.0
+Werkzeug==2.3.7
+psycopg2-binary==2.9.9
