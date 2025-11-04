@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - IoT Monitoring</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #1e3c72 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .header {
+            background: rgba(20, 30, 48, 0.95);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-links a,
+        .logout-btn {
+            padding: 0.6rem 1.2rem;
+            background: rgba(102, 126, 234, 0.8);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            font-weight: 500;
+        }
+
+        .nav-links a:hover,
+        .logout-btn:hover {
+            background: rgba(102, 126, 234, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .logout-btn {
+            background: rgba(220, 53, 69, 0.8);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 1);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #4ade80;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .card h3 {
+            color: #fff;
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-box {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        .data-stream {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .stream-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid #4ade80;
+        }
+
+        .stream-encrypted {
+            color: #4ade80;
+            font-size: 0.85rem;
+        }
+
+        .stream-data {
+            color: #e0e0e0;
+            margin-top: 0.25rem;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .users-table th {
+            background: rgba(102, 126, 234, 0.2);
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .users-table tr:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .role-badge {
+            padding: 0.4rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .role-badge.admin {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .role-badge.user {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .sessions-badge {
+            padding: 0.4rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            background: rgba(108, 117, 125, 0.8);
+            color: white;
+            display: inline-block;
+        }
+
+        .sessions-badge.active {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .create-user-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .create-user-form input,
+        .create-user-form select {
+            padding: 0.9rem;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: rgba(30, 41, 59, 0.5);
+            color: #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .create-user-form input:focus,
+        .create-user-form select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .create-user-btn {
+            padding: 0.9rem 2rem;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .create-user-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .error {
+            background: rgba(220, 53, 69, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .loading {
+            text-align: center;
+            color: #94a3b8;
+            padding: 2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .create-user-form {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+
+            .create-user-form {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Admin Control Panel</h1>
+        <div class="nav-links">
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>System Online</span>
+            </div>
+            <a href="/dashboard">Dashboard</a>
+            <span style="color: #94a3b8;">Welcome, {{ username }}!</span>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Database Analytics -->
+        <div class="card">
+            <h3>Database Analytics</h3>
+            <div class="stats-container">
+                <div class="stat-box">
+                    <div class="stat-label">Total Records</div>
+                    <div class="stat-value" id="totalRecords">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Query Efficiency</div>
+                    <div class="stat-value" id="queryEfficiency">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Active Connections</div>
+                    <div class="stat-value" id="activeConnections">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Data Throughput</div>
+                    <div class="stat-value" id="dataThroughput">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-grid">
+            <!-- ESP32 Data Stream -->
+            <div class="card">
+                <h3>ESP32 Data Stream</h3>
+                <div class="data-stream" id="dataStream">
+                    <div class="loading">Waiting for data...</div>
+                </div>
+            </div>
+
+            <!-- User Profile Summary -->
+            <div class="card">
+                <h3>👤 User Profile</h3>
+                <div class="stats-container">
+                    <div class="stat-box">
+                        <div class="stat-label">Username</div>
+                        <div style="color: #fff; font-size: 1.2rem; margin-top: 0.5rem;">{{ username }}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Role</div>
+                        <div style="margin-top: 0.5rem;">
+                            <span class="role-badge admin">SUPER ADMIN</span>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Active Sessions</div>
+                        <div class="stat-value" id="userSessions" style="font-size: 1.8rem;">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-value" id="totalUsers" style="font-size: 1.8rem;">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Management -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0;">👥 User Management</h3>
+                <button onclick="resetAllSessions()" style="padding: 0.75rem 1.5rem; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    🔄 Reset All Sessions
+                </button>
+            </div>
+            
+            <!-- Create User Form -->
+            <div class="create-user-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="newUsername" placeholder="Enter username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="newPassword" placeholder="Enter password" required>
+                </div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="newRole">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button class="create-user-btn" onclick="createUser()">➕ Create User</button>
+            </div>
+
+            <div id="userCreationMessage"></div>
+
+            <!-- Users Table -->
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Active Sessions</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr>
+                        <td colspan="5" class="loading">Loading users...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let lastDataTimestamp = 0;
+        const dataStreamItems = [];
+
+        // Load dashboard statistics
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch('/api/dashboard-stats');
+                const stats = await response.json();
+                
+                document.getElementById('totalRecords').textContent = (stats.total_records || 0).toLocaleString();
+                document.getElementById('queryEfficiency').textContent = (stats.query_efficiency || 0) + '%'; // Real calculated value
+                document.getElementById('activeConnections').textContent = stats.active_connections || 0;
+                document.getElementById('dataThroughput').textContent = (stats.throughput || 0) + '/min';
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                
+                const usersTableBody = document.getElementById('usersTableBody');
+                document.getElementById('totalUsers').textContent = users.length;
+                
+                // Calculate user's active sessions
+                const currentUser = users.find(u => u.username === '{{ username }}');
+                if (currentUser) {
+                    document.getElementById('userSessions').textContent = currentUser.active_sessions;
+                }
+                
+                if (users.length > 0) {
+                    let tableHTML = '';
+                    users.forEach(user => {
+                        const roleClass = user.role === 'admin' ? 'admin' : 'user';
+                        const sessionsClass = user.active_sessions > 0 ? 'active' : '';
+                        tableHTML += `
+                            <tr>
+                                <td>${user.id}</td>
+                                <td>${user.username}</td>
+                                <td><span class="role-badge ${roleClass}">${user.role.toUpperCase()}</span></td>
+                                <td><span class="sessions-badge ${sessionsClass}">${user.active_sessions}</span></td>
+                                <td>${new Date(user.created_at).toLocaleString()}</td>
+                            </tr>
+                        `;
+                    });
+                    usersTableBody.innerHTML = tableHTML;
+                } else {
+                    usersTableBody.innerHTML = '<tr><td colspan="5">No users found</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="5" class="error">Error loading users</td></tr>';
+            }
+        }
+
+        // Reset all sessions
+        async function resetAllSessions() {
+            if (!confirm('Are you sure you want to reset all active sessions? This will set all session counts to 0.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/reset-sessions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ All sessions reset successfully!');
+                    loadUsers(); // Reload users table
+                    loadDashboardStats(); // Reload stats
+                } else {
+                    alert('❌ Error: ' + (result.error || 'Failed to reset sessions'));
+                }
+            } catch (error) {
+                console.error('Error resetting sessions:', error);
+                alert('❌ Error resetting sessions');
+            }
+        }
+
+        // Create new user
+        async function createUser() {
+            const username = document.getElementById('newUsername').value.trim();
+            const password = document.getElementById('newPassword').value;
+            const role = document.getElementById('newRole').value;
+            const messageDiv = document.getElementById('userCreationMessage');
+            
+            if (!username || !password) {
+                messageDiv.innerHTML = '<div class="error">❌ Username and password are required</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password, role })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = '<div class="success">✅ User created successfully!</div>';
+                    document.getElementById('newUsername').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('newRole').value = 'user';
+                    loadUsers(); // Reload users table
+                    
+                    // Clear success message after 3 seconds
+                    setTimeout(() => {
+                        messageDiv.innerHTML = '';
+                    }, 3000);
+                } else {
+                    messageDiv.innerHTML = `<div class="error">❌ ${result.error || 'Failed to create user'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error creating user:', error);
+                messageDiv.innerHTML = '<div class="error">❌ Error creating user</div>';
+            }
+        }
+
+        // Simulate ESP32 data stream (in production, this would be real-time data)
+        async function loadRecentData() {
+            try {
+                const response = await fetch('/api/historical-data?limit=5');
+                const data = await response.json();
+                
+                const dataStreamDiv = document.getElementById('dataStream');
+                
+                if (data.length > 0) {
+                    let streamHTML = '';
+                    data.forEach(item => {
+                        const timestamp = new Date(item.timestamp * 1000).toLocaleTimeString();
+                        streamHTML += `
+                            <div class="stream-item">
+                                <div class="stream-encrypted">AES-256-CBC Encrypted</div>
+                                <div class="stream-data">
+                                    <strong>Received:</strong> {"temp":${item.temperature.toFixed(1)},"hum":${item.humidity.toFixed(1)},"ts":${item.timestamp}}
+                                </div>
+                                <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.25rem;">
+                                    ${timestamp} | Team ${item.team_number}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    dataStreamDiv.innerHTML = streamHTML;
+                } else {
+                    dataStreamDiv.innerHTML = '<div class="loading">No data received yet</div>';
+                }
+            } catch (error) {
+                console.error('Error loading data stream:', error);
+            }
+        }
+
+        // Refresh all data
+        function refreshAllData() {
+            loadDashboardStats();
+            loadUsers();
+            loadRecentData();
+        }
+
+        // Auto-refresh every 10 seconds
+        setInterval(refreshAllData, 10000);
+
+        // Initial load
+        refreshAllData();
+    </script>
+</body>
+</html>
+
