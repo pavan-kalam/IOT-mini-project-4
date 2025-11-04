@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header .admin-link {
+            padding: 0.5rem 1rem;
+            background: #17a2b8;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .header .admin-link:hover {
+            background: #138496;
+        }
+
+        .header .user-info span {
+            color: #666;
+        }
+
+        .header .user-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .header .user-badge.admin {
+            background: #28a745;
+            color: white;
+        }
+
+        .header .user-badge.user {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            background: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            margin-bottom: 1rem;
+            color: #333;
+            font-size: 1.2rem;
+        }
+
+        .current-reading {
+            text-align: center;
+        }
+
+        .metric {
+            display: inline-block;
+            margin: 0 1rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-online {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .status-offline {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .search-section {
+            margin-bottom: 2rem;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-form input, .search-form select {
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .search-form input:focus, .search-form select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .data-table th, .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .weather-card {
+            text-align: center;
+        }
+
+        .weather-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .weather-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .weather-item {
+            text-align: center;
+        }
+
+        .weather-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .weather-label {
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .alarm-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .alarm-card h3 {
+            margin-bottom: 1rem;
+            color: #333;
+            font-size: 1.2rem;
+        }
+
+        .alarm-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .alarm-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .alarm-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .alarm-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .set-alarm-btn {
+            background: #10b981;
+            color: white;
+        }
+
+        .set-alarm-btn:hover {
+            background: #059669;
+        }
+
+        .clear-alarm-btn {
+            background: #ef4444;
+            color: white;
+        }
+
+        .clear-alarm-btn:hover {
+            background: #dc2626;
+        }
+
+        .alarm-status {
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .alarm-active {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 2px solid #3b82f6;
+        }
+
+        .alarm-triggered {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+            animation: alarmPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes alarmPulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .alarm-icon {
+            font-size: 2rem;
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>IoT Monitoring Dashboard</h1>
+        <div class="user-info">
+            <span>Welcome, {{ username }}!</span>
+            <span class="user-badge {{ role }}">{{ role|upper }}</span>
+            {% if role == 'admin' %}
+            <a href="/admin" class="admin-link">Admin Panel</a>
+            {% endif %}
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Dashboard Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Records</div>
+                <div class="stat-value" id="totalRecords">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Connections</div>
+                <div class="stat-value" id="activeConnections">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Data Throughput</div>
+                <div class="stat-value" id="dataThroughput">-</div>
+            </div>
+        </div>
+
+        <!-- Current Reading Card -->
+        <div class="card current-reading">
+            <h3>Current Sensor Reading</h3>
+            <div id="currentData">
+                <div class="loading">Loading current data...</div>
+            </div>
+        </div>
+
+        <!-- Alarm Cards Grid -->
+        <div class="dashboard-grid" style="margin-bottom: 2rem;">
+            <!-- Temperature Alarm Card -->
+            <div class="alarm-card">
+                <h3>Temperature Alarm</h3>
+                <div class="alarm-controls">
+                    <input type="number" id="tempThreshold" class="alarm-input" placeholder="Set threshold (°C)" step="0.1">
+                    <button class="alarm-btn set-alarm-btn" onclick="setTemperatureAlarm()">Set Alarm</button>
+                    <button class="alarm-btn clear-alarm-btn" onclick="clearTemperatureAlarm()">Clear</button>
+                </div>
+                <div id="tempAlarmStatus"></div>
+            </div>
+
+            <!-- Humidity Alarm Card -->
+            <div class="alarm-card">
+                <h3>Humidity Alarm</h3>
+                <div class="alarm-controls">
+                    <input type="number" id="humidityThreshold" class="alarm-input" placeholder="Set threshold (%)" step="0.1">
+                    <button class="alarm-btn set-alarm-btn" onclick="setHumidityAlarm()">Set Alarm</button>
+                    <button class="alarm-btn clear-alarm-btn" onclick="clearHumidityAlarm()">Clear</button>
+                </div>
+                <div id="humidityAlarmStatus"></div>
+            </div>
+        </div>
+
+        <!-- Search Section -->
+        <div class="search-section">
+            <div class="card">
+                <h3>Search Historical Data</h3>
+                <form class="search-form" id="searchForm">
+                    <select id="metric">
+                        <option value="temperature">Temperature</option>
+                        <option value="humidity">Humidity</option>
+                    </select>
+                    <input type="number" id="threshold" placeholder="Threshold value" step="0.1" required>
+                    <select id="comparison">
+                        <option value="above">Above</option>
+                        <option value="below">Below</option>
+                    </select>
+                    <input type="text" id="teamFilter" placeholder="Team number (optional)">
+                    <button type="submit" class="search-btn">Search</button>
+                </form>
+                <div id="searchResults"></div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Real-time Temperature Chart -->
+            <div class="card">
+                <h3>Temperature Trend</h3>
+                <div class="chart-container">
+                    <canvas id="temperatureChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Real-time Humidity Chart -->
+            <div class="card">
+                <h3>Humidity Trend</h3>
+                <div class="chart-container">
+                    <canvas id="humidityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Weather Card (Extra Credit) -->
+            <div class="card weather-card">
+                <h3>🌤️ Local Weather</h3>
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="citySearch" placeholder="Enter city name..." 
+                           style="padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; width: 70%; font-size: 1rem;">
+                    <button onclick="searchWeather()" 
+                            style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; margin-left: 0.5rem;">
+                        Search
+                    </button>
+                </div>
+                <div id="weatherData">
+                    <div class="loading">Loading weather data...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historical Data Table -->
+        <div class="card">
+            <h3>Recent Sensor Data</h3>
+            <div id="historicalData">
+                <div class="loading">Loading historical data...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refresh Button -->
+    <button class="refresh-btn" onclick="refreshAllData()" title="Refresh Data">
+        🔄
+    </button>
+
+    <script>
+        // Temperature Chart setup
+        const ctx = document.getElementById('temperatureChart').getContext('2d');
+        const temperatureChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Temperature (°C)',
+                    data: [],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+
+        // Humidity Chart setup
+        const ctxHumidity = document.getElementById('humidityChart').getContext('2d');
+        const humidityChart = new Chart(ctxHumidity, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Humidity (%)',
+                    data: [],
+                    borderColor: '#48bb78',
+                    backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Humidity (%)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+
+        // Load current data
+        async function loadCurrentData() {
+            try {
+                const response = await fetch('/api/current-data');
+                const data = await response.json();
+                
+                const currentDataDiv = document.getElementById('currentData');
+                if (data.temperature > 0) {
+                    currentDataDiv.innerHTML = `
+                        <div class="metric">
+                            <div class="metric-value">${data.temperature.toFixed(1)}°C</div>
+                            <div class="metric-label">Temperature</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${data.humidity.toFixed(1)}%</div>
+                            <div class="metric-label">Humidity</div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <span class="status-indicator status-online"></span>
+                            <span>Last updated: ${new Date(data.timestamp * 1000).toLocaleString()}</span>
+                        </div>
+                    `;
+                    
+                    // Check alarms with current sensor data
+                    checkAlarms(data.temperature, data.humidity);
+                } else {
+                    currentDataDiv.innerHTML = `
+                        <div class="error">
+                            <span class="status-indicator status-offline"></span>
+                            No sensor data available
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('currentData').innerHTML = `
+                    <div class="error">Error loading current data: ${error.message}</div>
+                `;
+            }
+        }
+
+        // Load historical data
+        async function loadHistoricalData() {
+            try {
+                const response = await fetch('/api/historical-data?limit=50');
+                const data = await response.json();
+                
+                const historicalDiv = document.getElementById('historicalData');
+                if (data.length > 0) {
+                    let tableHTML = `
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Team</th>
+                                    <th>Temperature</th>
+                                    <th>Humidity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.forEach(row => {
+                        tableHTML += `
+                            <tr>
+                                <td>${new Date(row.timestamp * 1000).toLocaleString()}</td>
+                                <td>${row.team_number}</td>
+                                <td>${row.temperature.toFixed(1)}°C</td>
+                                <td>${row.humidity.toFixed(1)}%</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    historicalDiv.innerHTML = tableHTML;
+                    
+                    // Update chart
+                    updateChart(data.slice(0, 20).reverse());
+                } else {
+                    historicalDiv.innerHTML = '<div class="error">No historical data available</div>';
+                }
+            } catch (error) {
+                document.getElementById('historicalData').innerHTML = `
+                    <div class="error">Error loading historical data: ${error.message}</div>
+                `;
+            }
+        }
+
+        // Load weather data for a specific city
+        async function loadWeatherData(city = null) {
+            // Use provided city, or get from input, or use saved city, or default to Kansas City
+            if (!city) {
+                const inputCity = document.getElementById('citySearch').value.trim();
+                city = inputCity || localStorage.getItem('lastWeatherCity') || 'Kansas City';
+            }
+            
+            try {
+                const response = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+                const data = await response.json();
+                
+                const weatherDiv = document.getElementById('weatherData');
+                if (data.temperature !== undefined) {
+                    weatherDiv.innerHTML = `
+                        <div class="weather-icon">🌤️</div>
+                        <div class="weather-info">
+                            <div class="weather-item">
+                                <div class="weather-value">${data.temperature}°C</div>
+                                <div class="weather-label">Temperature</div>
+                            </div>
+                            <div class="weather-item">
+                                <div class="weather-value">${data.humidity}%</div>
+                                <div class="weather-label">Humidity</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <strong>${data.location}</strong><br>
+                            <span style="color: #666;">${data.condition}</span><br>
+                            <small style="color: #999;">Updated: ${new Date(data.updated).toLocaleTimeString()}</small>
+                        </div>
+                    `;
+                    
+                    // Save last searched city
+                    localStorage.setItem('lastWeatherCity', city);
+                    document.getElementById('citySearch').value = city;
+                } else {
+                    weatherDiv.innerHTML = `
+                        <div class="error">Weather data not available for ${city}</div>
+                        <small style="color: #666;">Try another city name</small>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('weatherData').innerHTML = `
+                    <div class="error">Error loading weather data for ${city}</div>
+                `;
+            }
+        }
+
+        // Search weather for user-entered city
+        function searchWeather() {
+            const city = document.getElementById('citySearch').value.trim();
+            if (city) {
+                loadWeatherData(city);
+            } else {
+                alert('Please enter a city name');
+            }
+        }
+
+        // Update chart with new data
+        function updateChart(data) {
+            const labels = data.map(row => new Date(row.timestamp * 1000).toLocaleTimeString());
+            const temperatures = data.map(row => row.temperature);
+            const humidities = data.map(row => row.humidity);
+            
+            // Update temperature chart
+            temperatureChart.data.labels = labels;
+            temperatureChart.data.datasets[0].data = temperatures;
+            temperatureChart.update();
+            
+            // Update humidity chart
+            humidityChart.data.labels = labels;
+            humidityChart.data.datasets[0].data = humidities;
+            humidityChart.update();
+        }
+
+        // Search functionality
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const metric = document.getElementById('metric').value;
+            const threshold = document.getElementById('threshold').value;
+            const comparison = document.getElementById('comparison').value;
+            const teamFilter = document.getElementById('teamFilter').value;
+            
+            try {
+                let url = `/api/search-data?threshold=${threshold}&comparison=${comparison}&metric=${metric}`;
+                if (teamFilter) {
+                    url += `&team=${teamFilter}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const resultsDiv = document.getElementById('searchResults');
+                if (data.length > 0) {
+                    let tableHTML = `
+                        <h4>Search Results (${data.length} records found)</h4>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Team</th>
+                                    <th>Temperature</th>
+                                    <th>Humidity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.forEach(row => {
+                        tableHTML += `
+                            <tr>
+                                <td>${new Date(row.timestamp * 1000).toLocaleString()}</td>
+                                <td>${row.team_number}</td>
+                                <td>${row.temperature.toFixed(1)}°C</td>
+                                <td>${row.humidity.toFixed(1)}%</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    resultsDiv.innerHTML = tableHTML;
+                } else {
+                    resultsDiv.innerHTML = '<div class="error">No records found matching your criteria</div>';
+                }
+            } catch (error) {
+                document.getElementById('searchResults').innerHTML = `
+                    <div class="error">Search error: ${error.message}</div>
+                `;
+            }
+        });
+
+        // Alarm system variables
+        let tempAlarmThreshold = null;
+        let humidityAlarmThreshold = null;
+        let alarmAudio = null;
+        let isAlarmPlaying = false;
+        
+        // Initialize alarm audio
+        try {
+            alarmAudio = new Audio('{{ url_for("static", filename="alert.mp3") }}');
+            alarmAudio.load();
+        } catch (error) {
+            console.error('Error loading alarm audio:', error);
+        }
+
+        // Play alarm sound from alert.mp3
+        function playAlarmSound() {
+            if (isAlarmPlaying || !alarmAudio) {
+                console.log('Alarm already playing or audio not loaded');
+                return;
+            }
+            
+            isAlarmPlaying = true;
+            alarmAudio.volume = 0.7; // Set volume to 70%
+            alarmAudio.currentTime = 0; // Reset to start
+            
+            const playPromise = alarmAudio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log('✅ Alarm sound playing successfully!');
+                }).catch(error => {
+                    console.error('❌ Error playing alarm sound:', error);
+                    alert('⚠️ Please enable audio permissions in your browser to hear alarms!');
+                    isAlarmPlaying = false;
+                });
+            }
+            
+            // Reset flag when sound ends
+            alarmAudio.onended = function() {
+                console.log('Alarm sound ended');
+                isAlarmPlaying = false;
+            };
+            
+            // Safety timeout in case onended doesn't fire
+            setTimeout(() => {
+                isAlarmPlaying = false;
+            }, 10000); // 10 second timeout
+        }
+
+        // Set temperature alarm
+        function setTemperatureAlarm() {
+            const threshold = parseFloat(document.getElementById('tempThreshold').value);
+            if (isNaN(threshold)) {
+                alert('Please enter a valid temperature threshold');
+                return;
+            }
+            
+            tempAlarmThreshold = threshold;
+            document.getElementById('tempAlarmStatus').innerHTML = `
+                <div class="alarm-status alarm-active">
+                    <span class="alarm-icon">✅</span>
+                    Alarm set for ${threshold}°C
+                </div>
+            `;
+            
+            // Save to localStorage
+            localStorage.setItem('tempAlarmThreshold', threshold);
+        }
+
+        // Clear temperature alarm
+        function clearTemperatureAlarm() {
+            tempAlarmThreshold = null;
+            document.getElementById('tempAlarmStatus').innerHTML = '';
+            document.getElementById('tempThreshold').value = '';
+            localStorage.removeItem('tempAlarmThreshold');
+        }
+
+        // Set humidity alarm
+        function setHumidityAlarm() {
+            const threshold = parseFloat(document.getElementById('humidityThreshold').value);
+            if (isNaN(threshold)) {
+                alert('Please enter a valid humidity threshold');
+                return;
+            }
+            
+            humidityAlarmThreshold = threshold;
+            document.getElementById('humidityAlarmStatus').innerHTML = `
+                <div class="alarm-status alarm-active">
+                    <span class="alarm-icon">✅</span>
+                    Alarm set for ${threshold}%
+                </div>
+            `;
+            
+            // Save to localStorage
+            localStorage.setItem('humidityAlarmThreshold', threshold);
+        }
+
+        // Clear humidity alarm
+        function clearHumidityAlarm() {
+            humidityAlarmThreshold = null;
+            document.getElementById('humidityAlarmStatus').innerHTML = '';
+            document.getElementById('humidityThreshold').value = '';
+            localStorage.removeItem('humidityAlarmThreshold');
+        }
+
+        // Check alarms against current readings
+        function checkAlarms(temperature, humidity) {
+            // Check temperature alarm
+            if (tempAlarmThreshold !== null && temperature >= tempAlarmThreshold) {
+                document.getElementById('tempAlarmStatus').innerHTML = `
+                    <div class="alarm-status alarm-triggered">
+                        <span class="alarm-icon">🚨</span>
+                        ALARM! Temperature ${temperature}°C exceeded threshold ${tempAlarmThreshold}°C
+                    </div>
+                `;
+                playAlarmSound();
+                
+                // Browser notification
+                if (Notification.permission === 'granted') {
+                    new Notification('Temperature Alarm!', {
+                        body: `Temperature ${temperature}°C exceeded threshold ${tempAlarmThreshold}°C`,
+                        icon: '🌡️'
+                    });
+                }
+            } else if (tempAlarmThreshold !== null) {
+                document.getElementById('tempAlarmStatus').innerHTML = `
+                    <div class="alarm-status alarm-active">
+                        <span class="alarm-icon">✅</span>
+                        Alarm set for ${tempAlarmThreshold}°C (Current: ${temperature}°C)
+                    </div>
+                `;
+            }
+            
+            // Check humidity alarm
+            if (humidityAlarmThreshold !== null && humidity >= humidityAlarmThreshold) {
+                document.getElementById('humidityAlarmStatus').innerHTML = `
+                    <div class="alarm-status alarm-triggered">
+                        <span class="alarm-icon">🚨</span>
+                        ALARM! Humidity ${humidity}% exceeded threshold ${humidityAlarmThreshold}%
+                    </div>
+                `;
+                playAlarmSound();
+                
+                // Browser notification
+                if (Notification.permission === 'granted') {
+                    new Notification('Humidity Alarm!', {
+                        body: `Humidity ${humidity}% exceeded threshold ${humidityAlarmThreshold}%`,
+                        icon: '💧'
+                    });
+                }
+            } else if (humidityAlarmThreshold !== null) {
+                document.getElementById('humidityAlarmStatus').innerHTML = `
+                    <div class="alarm-status alarm-active">
+                        <span class="alarm-icon">✅</span>
+                        Alarm set for ${humidityAlarmThreshold}% (Current: ${humidity}%)
+                    </div>
+                `;
+            }
+        }
+
+        // Load saved alarms from localStorage
+        function loadSavedAlarms() {
+            const savedTempThreshold = localStorage.getItem('tempAlarmThreshold');
+            const savedHumidityThreshold = localStorage.getItem('humidityAlarmThreshold');
+            
+            if (savedTempThreshold) {
+                tempAlarmThreshold = parseFloat(savedTempThreshold);
+                document.getElementById('tempThreshold').value = savedTempThreshold;
+                document.getElementById('tempAlarmStatus').innerHTML = `
+                    <div class="alarm-status alarm-active">
+                        <span class="alarm-icon">✅</span>
+                        Alarm set for ${savedTempThreshold}°C
+                    </div>
+                `;
+            }
+            
+            if (savedHumidityThreshold) {
+                humidityAlarmThreshold = parseFloat(savedHumidityThreshold);
+                document.getElementById('humidityThreshold').value = savedHumidityThreshold;
+                document.getElementById('humidityAlarmStatus').innerHTML = `
+                    <div class="alarm-status alarm-active">
+                        <span class="alarm-icon">✅</span>
+                        Alarm set for ${savedHumidityThreshold}%
+                    </div>
+                `;
+            }
+        }
+
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Load dashboard statistics
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch('/api/dashboard-stats');
+                const stats = await response.json();
+                
+                document.getElementById('totalRecords').textContent = stats.total_records || 0;
+                document.getElementById('activeConnections').textContent = stats.active_connections || 0;
+                document.getElementById('dataThroughput').textContent = (stats.throughput || 0) + '/min';
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+
+        // Refresh all data
+        function refreshAllData() {
+            loadCurrentData();
+            loadHistoricalData();
+            loadWeatherData();
+            loadDashboardStats();
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshAllData, 30000);
+
+        // Allow Enter key to search weather
+        const cityInput = document.getElementById('citySearch');
+        if (cityInput) {
+            cityInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchWeather();
+                }
+            });
+        }
+
+        // Initial load
+        loadSavedAlarms(); // Load saved alarm settings
+        refreshAllData();
+    </script>
+</body>
+</html>
