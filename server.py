@@ -538,7 +538,7 @@ def search_data():
 
 # Below is the function to get the weather data from the OpenWeatherMap API
 def get_weather_data(lat=None, lon=None, city=None):
-    """Get weather data from OpenWeatherMap API (extra credit feature)"""
+    """Get weather data from OpenWeatherMap API"""
     if not WEATHER_API_KEY:
         return None
     
@@ -581,7 +581,7 @@ def get_weather_data(lat=None, lon=None, city=None):
 @app.route('/api/weather')
 @login_required
 def get_weather():
-    """Get weather data endpoint (extra credit)"""
+    """Get weather data endpoint"""
     # This is to get the latitude, longitude, and city from the request parameters
     lat = request.args.get('lat', type=float)
     lon = request.args.get('lon', type=float)
