@@ -1100,8 +1100,8 @@
             loadDashboardStats();
         }
 
-        // Auto-refresh every 30 seconds
-        setInterval(refreshAllData, 30000);
+        // Auto-refresh every 10 seconds (matches ESP32 upload interval)
+        setInterval(refreshAllData, 10000);
 
         // Allow Enter key to search weather
         const cityInput = document.getElementById('citySearch');
