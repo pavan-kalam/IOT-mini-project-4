@@ -445,6 +445,68 @@
                 text-align: center;
             }
         }
+
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pagination-btn {
+            padding: 0.5rem 1rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: #5568d3;
+        }
+
+        .pagination-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .pagination-info {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .pagination-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pagination-size-selector select {
+            padding: 0.5rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .pagination-size-selector label {
+            color: #666;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -705,45 +767,168 @@
             }
         }
 
+        // Pagination state for historical data
+        let historicalDataAll = [];
+        let historicalDataCurrentPage = 1;
+        let historicalDataPageSize = 10;
+
+        // Pagination state for search results
+        let searchDataAll = [];
+        let searchDataCurrentPage = 1;
+        let searchDataPageSize = 10;
+
+        // Generic pagination function
+        function renderPagination(data, currentPage, pageSize, containerId, renderFunction) {
+            const totalPages = pageSize === 'all' ? 1 : Math.ceil(data.length / pageSize);
+            const startIdx = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
+            const endIdx = pageSize === 'all' ? data.length : startIdx + pageSize;
+            const paginatedData = data.slice(startIdx, endIdx);
+
+            renderFunction(paginatedData, data.length, startIdx, endIdx);
+
+            // Create pagination controls
+            const paginationHTML = `
+                <div class="pagination-container">
+                    <div class="pagination-info">
+                        Showing ${startIdx + 1} to ${Math.min(endIdx, data.length)} of ${data.length} records
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div class="pagination-size-selector">
+                            <label>Show:</label>
+                            <select onchange="changePageSize('${containerId}', this.value)">
+                                <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
+                                <option value="20" ${pageSize === 20 ? 'selected' : ''}>20</option>
+                                <option value="all" ${pageSize === 'all' ? 'selected' : ''}>All</option>
+                            </select>
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="pagination-btn" onclick="goToPage('${containerId}', ${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                                Previous
+                            </button>
+                            <span class="pagination-info">Page ${currentPage} of ${totalPages}</span>
+                            <button class="pagination-btn" onclick="goToPage('${containerId}', ${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return paginationHTML;
+        }
+
+        // Change page size function
+        function changePageSize(containerId, newSize) {
+            if (containerId === 'historicalData') {
+                historicalDataPageSize = newSize === 'all' ? 'all' : parseInt(newSize);
+                historicalDataCurrentPage = 1;
+                renderHistoricalDataTable();
+            } else if (containerId === 'searchResults') {
+                searchDataPageSize = newSize === 'all' ? 'all' : parseInt(newSize);
+                searchDataCurrentPage = 1;
+                renderSearchResultsTable();
+            }
+        }
+
+        // Go to page function
+        function goToPage(containerId, page) {
+            if (containerId === 'historicalData') {
+                const totalPages = historicalDataPageSize === 'all' ? 1 : Math.ceil(historicalDataAll.length / historicalDataPageSize);
+                if (page >= 1 && page <= totalPages) {
+                    historicalDataCurrentPage = page;
+                    renderHistoricalDataTable();
+                }
+            } else if (containerId === 'searchResults') {
+                const totalPages = searchDataPageSize === 'all' ? 1 : Math.ceil(searchDataAll.length / searchDataPageSize);
+                if (page >= 1 && page <= totalPages) {
+                    searchDataCurrentPage = page;
+                    renderSearchResultsTable();
+                }
+            }
+        }
+
+        // Render historical data table with pagination
+        function renderHistoricalDataTable() {
+            const historicalDiv = document.getElementById('historicalData');
+            if (historicalDataAll.length === 0) {
+                historicalDiv.innerHTML = '<div class="error">No historical data available</div>';
+                return;
+            }
+
+            const totalPages = historicalDataPageSize === 'all' ? 1 : Math.ceil(historicalDataAll.length / historicalDataPageSize);
+            const startIdx = historicalDataPageSize === 'all' ? 0 : (historicalDataCurrentPage - 1) * historicalDataPageSize;
+            const endIdx = historicalDataPageSize === 'all' ? historicalDataAll.length : startIdx + historicalDataPageSize;
+            const paginatedData = historicalDataAll.slice(startIdx, endIdx);
+
+            const paginationHTML = `
+                <div class="pagination-container">
+                    <div class="pagination-info">
+                        Showing ${startIdx + 1} to ${Math.min(endIdx, historicalDataAll.length)} of ${historicalDataAll.length} records
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div class="pagination-size-selector">
+                            <label>Show:</label>
+                            <select onchange="changePageSize('historicalData', this.value)">
+                                <option value="10" ${historicalDataPageSize === 10 ? 'selected' : ''}>10</option>
+                                <option value="20" ${historicalDataPageSize === 20 ? 'selected' : ''}>20</option>
+                                <option value="all" ${historicalDataPageSize === 'all' ? 'selected' : ''}>All</option>
+                            </select>
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="pagination-btn" onclick="goToPage('historicalData', ${historicalDataCurrentPage - 1})" ${historicalDataCurrentPage === 1 ? 'disabled' : ''}>
+                                Previous
+                            </button>
+                            <span class="pagination-info">Page ${historicalDataCurrentPage} of ${totalPages}</span>
+                            <button class="pagination-btn" onclick="goToPage('historicalData', ${historicalDataCurrentPage + 1})" ${historicalDataCurrentPage >= totalPages ? 'disabled' : ''}>
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Team</th>
+                            <th>Temperature</th>
+                            <th>Humidity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            paginatedData.forEach(row => {
+                tableHTML += `
+                    <tr>
+                        <td>${new Date(row.timestamp * 1000).toLocaleString()}</td>
+                        <td>${row.team_number}</td>
+                        <td>${row.temperature.toFixed(1)}°C</td>
+                        <td>${row.humidity.toFixed(1)}%</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table>';
+
+            historicalDiv.innerHTML = paginationHTML + tableHTML;
+        }
+
         // Load historical data
         async function loadHistoricalData() {
             try {
-                const response = await fetch('/api/historical-data?limit=50');
+                // Fetch all records (use a very high limit to get all data)
+                const response = await fetch('/api/historical-data?limit=10000');
                 const data = await response.json();
                 
-                const historicalDiv = document.getElementById('historicalData');
+                historicalDataAll = data;
+                historicalDataCurrentPage = 1;
+                renderHistoricalDataTable();
+                
+                // Update chart with most recent 20 records
                 if (data.length > 0) {
-                    let tableHTML = `
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Timestamp</th>
-                                    <th>Team</th>
-                                    <th>Temperature</th>
-                                    <th>Humidity</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-                    
-                    data.forEach(row => {
-                        tableHTML += `
-                            <tr>
-                                <td>${new Date(row.timestamp * 1000).toLocaleString()}</td>
-                                <td>${row.team_number}</td>
-                                <td>${row.temperature.toFixed(1)}°C</td>
-                                <td>${row.humidity.toFixed(1)}%</td>
-                            </tr>
-                        `;
-                    });
-                    
-                    tableHTML += '</tbody></table>';
-                    historicalDiv.innerHTML = tableHTML;
-                    
-                    // Update chart
                     updateChart(data.slice(0, 20).reverse());
-                } else {
-                    historicalDiv.innerHTML = '<div class="error">No historical data available</div>';
                 }
             } catch (error) {
                 document.getElementById('historicalData').innerHTML = `
@@ -828,6 +1013,76 @@
             humidityChart.update();
         }
 
+        // Render search results table with pagination
+        function renderSearchResultsTable() {
+            const resultsDiv = document.getElementById('searchResults');
+            if (searchDataAll.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">No records found matching your criteria</div>';
+                return;
+            }
+
+            const totalPages = searchDataPageSize === 'all' ? 1 : Math.ceil(searchDataAll.length / searchDataPageSize);
+            const startIdx = searchDataPageSize === 'all' ? 0 : (searchDataCurrentPage - 1) * searchDataPageSize;
+            const endIdx = searchDataPageSize === 'all' ? searchDataAll.length : startIdx + searchDataPageSize;
+            const paginatedData = searchDataAll.slice(startIdx, endIdx);
+
+            const paginationHTML = `
+                <div class="pagination-container">
+                    <div class="pagination-info">
+                        Showing ${startIdx + 1} to ${Math.min(endIdx, searchDataAll.length)} of ${searchDataAll.length} records
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div class="pagination-size-selector">
+                            <label>Show:</label>
+                            <select onchange="changePageSize('searchResults', this.value)">
+                                <option value="10" ${searchDataPageSize === 10 ? 'selected' : ''}>10</option>
+                                <option value="20" ${searchDataPageSize === 20 ? 'selected' : ''}>20</option>
+                                <option value="all" ${searchDataPageSize === 'all' ? 'selected' : ''}>All</option>
+                            </select>
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="pagination-btn" onclick="goToPage('searchResults', ${searchDataCurrentPage - 1})" ${searchDataCurrentPage === 1 ? 'disabled' : ''}>
+                                Previous
+                            </button>
+                            <span class="pagination-info">Page ${searchDataCurrentPage} of ${totalPages}</span>
+                            <button class="pagination-btn" onclick="goToPage('searchResults', ${searchDataCurrentPage + 1})" ${searchDataCurrentPage >= totalPages ? 'disabled' : ''}>
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let tableHTML = `
+                <h4>Search Results (${searchDataAll.length} records found)</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Team</th>
+                            <th>Temperature</th>
+                            <th>Humidity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            paginatedData.forEach(row => {
+                tableHTML += `
+                    <tr>
+                        <td>${new Date(row.timestamp * 1000).toLocaleString()}</td>
+                        <td>${row.team_number}</td>
+                        <td>${row.temperature.toFixed(1)}°C</td>
+                        <td>${row.humidity.toFixed(1)}%</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table>';
+
+            resultsDiv.innerHTML = paginationHTML + tableHTML;
+        }
+
         // Search functionality
         document.getElementById('searchForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -846,38 +1101,9 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                const resultsDiv = document.getElementById('searchResults');
-                if (data.length > 0) {
-                    let tableHTML = `
-                        <h4>Search Results (${data.length} records found)</h4>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Timestamp</th>
-                                    <th>Team</th>
-                                    <th>Temperature</th>
-                                    <th>Humidity</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-                    
-                    data.forEach(row => {
-                        tableHTML += `
-                            <tr>
-                                <td>${new Date(row.timestamp * 1000).toLocaleString()}</td>
-                                <td>${row.team_number}</td>
-                                <td>${row.temperature.toFixed(1)}°C</td>
-                                <td>${row.humidity.toFixed(1)}%</td>
-                            </tr>
-                        `;
-                    });
-                    
-                    tableHTML += '</tbody></table>';
-                    resultsDiv.innerHTML = tableHTML;
-                } else {
-                    resultsDiv.innerHTML = '<div class="error">No records found matching your criteria</div>';
-                }
+                searchDataAll = data;
+                searchDataCurrentPage = 1;
+                renderSearchResultsTable();
             } catch (error) {
                 document.getElementById('searchResults').innerHTML = `
                     <div class="error">Search error: ${error.message}</div>
